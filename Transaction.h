@@ -42,6 +42,8 @@ public:
 
     void restart()
     {
+        if (!rollbacked) return;
+        cout << this << " -- restarted\n";
         rollbacked = false;
         proceed();
     }

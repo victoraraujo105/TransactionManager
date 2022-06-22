@@ -112,6 +112,8 @@ private:
         for (const auto& b: lockers)
             if ((*txn) < (*b))
             {
+                txn->dependents.push_back(b);
+                b->dependencies.push_back(txn);
                 b->rollback();
                 cout << b << " -- rollbacked\n";
                 rollbacked = true;
@@ -182,7 +184,7 @@ private:
 
     void printDependencies()
     {
-        cout << "Dependencias por transaçao:\n";
+        cout << "Dependencias por transacao:\n";
         for (const auto& pair: trans)
         {
             const auto& txn = pair.second;

@@ -45,6 +45,7 @@ bool Item::deadlocked(Transaction* a)
 
 void Item::freeLock(Transaction* txn)
 {
+    while (peekNext().first == txn && txn->rollbacked) queue.pop_back();
     lockers.remove(txn);
     if (lockers.size() == 1 && lockers.contains(peekNext().first))
     {
@@ -61,6 +62,11 @@ void Item::freeLock(Transaction* txn)
     {
         lock = nextLockType();
         do {
+            while (peekNext().first == txn && txn->rollbacked)
+            {
+                queue.pop_back();
+                lock = LockType::SHARED;
+            }
             popNext();
 
         } while (queue.size() > 0 && lock*nextLockType() == LockType::SHARED);
@@ -76,6 +82,8 @@ void Item::popNext()
     queue.remove(pair);
     lockers.push_back(txn);
     txn->addLock(this);
+    // if (pair.first->rollbacked) freeLock(txn);
+    cout << txn << " -- continued\n";
     txn->proceed();
 }
 
@@ -83,7 +91,7 @@ void Item::popNext()
 ActionState Item::grantSharedLock(AccessAction* a)
 {
     const auto& txn = a->parent;
-    if (txn->isLocking(this)) return ActionState::DONE;
+    if (lockers.contains(txn)) return ActionState::DONE;
 
     switch (lock)
     {
@@ -99,6 +107,7 @@ ActionState Item::grantSharedLock(AccessAction* a)
     case LockType::EXCLUSIVE:
         if (queue.size() == 1 && queue.front().first == txn) return ActionState::DONE;
         txn->addDependencies(lockers);
+        for (const auto& locker: lockers) locker->dependents.push_back(txn);
         {
             ActionState state = txn->parent.protocol(a, lockers);
             if (state == ActionState::DONE) return grantSharedLock(a);
@@ -116,16 +125,20 @@ ActionState Item::grantExclusiveLock(AccessAction* a)
     const auto& txn = a->parent;
     // cout << "incidence: " << incidence << '\n';
     // cout << "ExclusiveLock on item " << id << " requested by T" << txn->id << ".\n";
-    if (lockers.size() == 0 || (lockers.size() == 1 && txn->isLocking(this)))
+    if (lockers.size() == 0 || (lockers.size() == 1 && lockers.contains(txn)))
     {
         lock = LockType::EXCLUSIVE;
-        txn->addLock(this);
-        lockers.push_back(txn);
+        if (!lockers.contains(txn))
+        {
+            txn->addLock(this);
+            lockers.push_back(txn);
+        }
         // cout << "granted!\n";
         return ActionState::DONE;
     }
     ActionState state = txn->parent.protocol(a, lockers);
     txn->addDependencies(lockers);
+    for (const auto& locker: lockers) locker->dependents.push_back(txn);
     if (state != ActionState::STASHED) return state;
     queue.push_back(pair(txn, LockType::EXCLUSIVE));
     // cout << "not granted!\n";

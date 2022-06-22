@@ -43,8 +43,8 @@ bool Transaction::isLocking(Item* item)
 
 void Transaction::rollback()
 {
-    rollbacked = true;
     next = 0;
+    rollbacked = true;
     while (!locked.empty())
     {
         locked.pop_back()->freeLock(this);

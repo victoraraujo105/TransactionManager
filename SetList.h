@@ -19,7 +19,7 @@ public:
     {
         if (contains(e))
         {
-            return;
+            // return;
         // data.erase(pos.at(e));
             // data.remove(e);
         }
@@ -37,7 +37,7 @@ public:
 
     bool remove(T e)
     {
-        data.erase(pos.at(e));
+        data.remove(e);
         return pos.erase(e) > 0;
     }
 
