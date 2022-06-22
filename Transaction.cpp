@@ -8,8 +8,8 @@
 
 using namespace std;
 
-Transaction::Transaction(TransactionManager& parent, string id):
-    parent(parent), next(0), dependencies(0), id(id)
+Transaction::Transaction(TransactionManager& parent, string id, int timestamp):
+    parent(parent), next(0), id(id), rollbacked(false), timestamp(timestamp)
 {
     parent.trans[id] = this;
 }
@@ -33,7 +33,7 @@ void Transaction::forwardAndProceed()
 
 void Transaction::addLock(Item* item)
 {
-    locked.emplace(item);
+    locked.push_back(item);
 }
 
 bool Transaction::isLocking(Item* item)
@@ -41,8 +41,25 @@ bool Transaction::isLocking(Item* item)
     return locked.contains(item);
 }
 
+void Transaction::rollback()
+{
+    rollbacked = true;
+    next = 0;
+    while (!locked.empty())
+    {
+        locked.pop_back()->freeLock(this);
+    }
+    for (const auto& dep: dependents)
+    {
+        dep->removeDependecy(this);
+        // dep->dependencies.remove(this);
+    }
+    dependents.clear();
+}
+
 Transaction::~Transaction()
 {
-    for (const auto& item: locked) item->freeLock();
+    for (const auto& item: locked) item->freeLock(this);
+    for (const auto& dep: dependents) dep->removeDependecy(this);
     parent.trans.erase(id);
 }

@@ -7,16 +7,17 @@
 #include <string>
 
 Action::Action(Transaction* const parent, ActionType type, int timestamp):
-    parent(parent), type(type), timestamp(timestamp), parentId(parent->id)
+    parent(parent), type(type), timestamp(timestamp), parentId(parent->id), state(ActionState::STASHED)
 {
     parent->actions.push_back(this);
     if (parent->next == parent->actions.size() - 1) parent->proceed();
 }
 
-bool Action::done()
+void Action::addDependencies(SetList<Transaction*> dependencies)
 {
-    return parent->next == parent->actions.size() || *this < *parent->actions[parent->next];
+    for (const auto& dep: dependencies) parent->dependencies.push_back(dep);
 }
+
 
 AccessAction::AccessAction(Transaction* const parent, Item& item, ActionType type, int timestamp):
     Action(parent, type, timestamp), item(item), itemId(item.id)
@@ -25,23 +26,43 @@ AccessAction::AccessAction(Transaction* const parent, Item& item, ActionType typ
 void ReadAction::run()
 {
     // cout << "r" << parentId << "(" << itemId << ")\n";
-    if (item.grantSharedLock(parent))
-    {
+    state = item.grantSharedLock(this);
+    if (state == ActionState::DONE) {
+        cout << to_string() << " -- done\n";
         parent->forwardAndProceed();
+    } else if (state == ActionState::STASHED) {
+        cout << to_string() << " -- stashed\n";
+    } else if (state == ActionState::ROLLBACKED) {
+        cout << to_string() << " -- rollbacked\n";
+        // item.printQueue();
+        item.printLocked();
+    } else if (state == ActionState::DEADLOCKED) {
+        parent->rollback();
     }
 }
 
 void WriteAction::run()
 {
     // cout << "w" << parentId << "(" << itemId << ")\n";
-    if (item.grantExclusiveLock(parent))
-    {
+    state = item.grantExclusiveLock(this);
+    if (state == ActionState::DONE) {
+        cout << to_string() << " -- done\n";
         parent->forwardAndProceed();
+    } else if (state == ActionState::STASHED) {
+        cout << to_string() << " -- stashed\n";
+    } else if (state == ActionState::ROLLBACKED) {
+        cout << to_string() << " -- rollbacked\n";
+        // item.printQueue();
+        item.printLocked();
+    } else if (state == ActionState::DEADLOCKED) {
+        parent->rollback();
     }
 }
 
 void CommitAction::run()
 {
     // cout << "C(" << parentId << ")\n";
+    state = ActionState::DONE;
+    cout << to_string() << " -- done\n";
     delete parent;
 }

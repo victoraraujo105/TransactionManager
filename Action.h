@@ -5,6 +5,8 @@
 #include <string>
 #include <iostream>
 
+#include "SetList.h"
+
 using namespace std;
 
 enum class ActionType {
@@ -12,7 +14,13 @@ enum class ActionType {
 };
 
 class Transaction;
+class TransactionManager;
 class Item;
+
+enum class ActionState
+{
+    STASHED, DONE, DEADLOCKED, ROLLBACKED
+};
 
 class Action
 {
@@ -21,6 +29,11 @@ protected:
     const string& parentId;
     const ActionType type;
     const int timestamp;
+    ActionState state;
+
+    friend Item;
+
+    void addDependencies(SetList<Transaction*> dep);
 public:
     
     Action(Transaction* const parent, ActionType type, int timestamp);
@@ -39,8 +52,6 @@ public:
         cout << "Action Base Destroyer Called.\n";
     }
 
-    virtual bool done();
-
     // template <class O>
     // friend O& operator << (O& o, const Action& a)
     // {
@@ -55,6 +66,7 @@ class AccessAction: public Action
 protected:
     Item& item;
     const string itemId;
+    friend TransactionManager;
 public:
     AccessAction(Transaction* const parent, Item& item, ActionType type, int timestamp);
 
@@ -114,8 +126,6 @@ public:
     {
         return "C("+ parentId + ")";
     }
-
-    bool done() override { return true; }
     
     virtual ~CommitAction()
     {

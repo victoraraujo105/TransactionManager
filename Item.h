@@ -5,11 +5,15 @@
 #include <memory>
 #include <string>
 
+#include "SetList.h"
+
 using namespace std;
 
 enum class LockType {
     NONE = 1, SHARED = 2, EXCLUSIVE = 3
 };
+
+extern const map<LockType, string> lockName;
 
 LockType operator * (const LockType& a, const LockType& b);
 
@@ -27,18 +31,22 @@ LockType operator * (const LockType& a, const LockType& b);
 // }
 
 
+class TransactionManager;
 class Transaction;
 class AccessAction;
+enum class ActionState;
 
 using LockRequest = pair<Transaction*, LockType>;
+using Lockers = SetList<Transaction*>;
 
 class Item
 {
 private:
     LockType lock;
-    int incidence;
-    list<LockRequest> queue;
+    Lockers lockers;
+    SetList<LockRequest> queue;
 
+    friend TransactionManager;
     friend Transaction;
     friend AccessAction;
 
@@ -51,17 +59,26 @@ private:
 
     const LockRequest& peekNext() { return queue.front(); }
 
-    void freeLock();
+    void freeLock(Transaction* txn);
+
+    bool deadlocked(Transaction* a);
+
+    bool waitDie(Transaction* a);
+    
+    bool woundWait(Transaction* a);
 
 public:
     string id;
 
     Item(string id):
-        lock(LockType::NONE), incidence(0), id(id)
+        lock(LockType::NONE), id(id)
     {}
 
-    bool grantSharedLock(Transaction* txn);
-    bool grantExclusiveLock(Transaction* txn);
+    ActionState grantSharedLock(AccessAction* txn);
+    ActionState grantExclusiveLock(AccessAction* txn);
+
+    void printQueue();
+    void printLocked();
 };
 
 #endif

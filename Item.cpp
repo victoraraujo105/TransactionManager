@@ -1,7 +1,11 @@
 #include "Item.h"
+#include "Action.h"
 #include "Transaction.h"
+#include "TransactionManager.h"
 
 #include <iostream>
+#include <map>
+#include <string>
 
 using namespace std;
 
@@ -20,15 +24,34 @@ LockType operator * (const LockType& a, const LockType& b)
     }
 }
 
-void Item::freeLock()
+const map<LockType, string> lockName{{LockType::NONE, "Livre"},{LockType::SHARED, "Compartilhado"}, {LockType::EXCLUSIVE, "Exclusivo"}};
+
+bool Item::deadlocked(Transaction* a)
 {
-    incidence--;
-    if (incidence == 1 && peekNext().first->isLocking(this))
+    for (const auto& b: lockers)
     {
-        lock = LockType::EXCLUSIVE;
-        popNext();
+        if (b->dependencies.contains(a))
+            return true;
+        // {
+        //     cout << "Deadlock!\n";
+        //     cout << "Detectada dependencia mutua entre " << a << " e " << b << '\n';
+        //     exit(EXIT_FAILURE);
+        // }
+
     }
-    if (incidence > 0) return;
+
+    return false;
+}
+
+void Item::freeLock(Transaction* txn)
+{
+    lockers.remove(txn);
+    if (lockers.size() == 1 && lockers.contains(peekNext().first))
+    {
+        lock = nextLockType();
+        return popNext();
+    }
+    if (lockers.size() > 0) return;
     // cout << "Item " << id << "'s queue:\n";
     // for (auto p: queue)
     // {
@@ -39,7 +62,7 @@ void Item::freeLock()
         lock = nextLockType();
         do {
             popNext();
-            incidence++;
+
         } while (queue.size() > 0 && lock*nextLockType() == LockType::SHARED);
         return;
     } 
@@ -48,16 +71,19 @@ void Item::freeLock()
 
 void Item::popNext()
 {
-    auto txn = queue.front().first;
-    queue.pop_front();
+    const auto& pair = queue.front();
+    const auto& txn = pair.first;
+    queue.remove(pair);
+    lockers.push_back(txn);
     txn->addLock(this);
     txn->proceed();
 }
 
 
-bool Item::grantSharedLock(Transaction* txn)
+ActionState Item::grantSharedLock(AccessAction* a)
 {
-    if (txn->isLocking(this)) return true;
+    const auto& txn = a->parent;
+    if (txn->isLocking(this)) return ActionState::DONE;
 
     switch (lock)
     {
@@ -67,32 +93,67 @@ bool Item::grantSharedLock(Transaction* txn)
         if (queue.size() == 0)
         {
             txn->addLock(this);
-            incidence++;
-            return true;
+            lockers.push_back(txn);
+            return ActionState::DONE;
         }
     case LockType::EXCLUSIVE:
-        queue.emplace_back(pair(txn, LockType::SHARED));
+        if (queue.size() == 1 && queue.front().first == txn) return ActionState::DONE;
+        txn->addDependencies(lockers);
+        {
+            ActionState state = txn->parent.protocol(a, lockers);
+            if (state == ActionState::DONE) return grantSharedLock(a);
+            if (state != ActionState::STASHED) return state;
+        }
+        queue.push_back(pair(txn, LockType::SHARED));
     default:
         break;
     }
-    return false;
+    return ActionState::STASHED;
 }
-bool Item::grantExclusiveLock(Transaction* txn)
+
+ActionState Item::grantExclusiveLock(AccessAction* a)
 {
+    const auto& txn = a->parent;
     // cout << "incidence: " << incidence << '\n';
     // cout << "ExclusiveLock on item " << id << " requested by T" << txn->id << ".\n";
-    if (incidence == 0 || (incidence == 1 && txn->isLocking(this)))
+    if (lockers.size() == 0 || (lockers.size() == 1 && txn->isLocking(this)))
     {
         lock = LockType::EXCLUSIVE;
-        if (incidence == 0)
-        {
-            txn->addLock(this);
-            incidence++;
-        }
+        txn->addLock(this);
+        lockers.push_back(txn);
         // cout << "granted!\n";
-        return true;
+        return ActionState::DONE;
     }
-    queue.emplace_back(pair(txn, LockType::EXCLUSIVE));
+    ActionState state = txn->parent.protocol(a, lockers);
+    txn->addDependencies(lockers);
+    if (state != ActionState::STASHED) return state;
+    queue.push_back(pair(txn, LockType::EXCLUSIVE));
     // cout << "not granted!\n";
-    return false;
+    return ActionState::STASHED;
+}
+
+void Item::printQueue()
+{
+    bool first = true;
+    cout << "Lista de espera de " << id << ":\n\t";
+    for (const auto& pair: queue)
+    {
+        if (first) first = false;
+        else cout << ", ";
+        cout << "{"<< pair.first << ", " << lockName.at(pair.second) << "}";
+    }
+    cout << '\n';
+}
+
+void Item::printLocked()
+{
+    bool first = true;
+    cout << "Bloqueios " << lockName.at(lock) << "s de " << id << ":\n\t";
+    for (const auto& txn: lockers)
+    {
+        if (first) first = false;
+        else cout << ", ";
+        cout << txn;
+    }
+    cout << '\n';
 }
