@@ -1,10 +1,9 @@
 #ifndef ITEM_H
 #define ITEM_H
 
-#include "SetList.h"
+#include <list>
 #include <memory>
 #include <string>
-#include <map>
 
 #include "SetList.h"
 
