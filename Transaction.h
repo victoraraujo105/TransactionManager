@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <iostream>
 
 #include "SetList.h"
 
@@ -42,7 +43,12 @@ public:
 
     void restart()
     {
-        rollbacked = false;
+        cout << this;
+        if (rollbacked)
+        {
+            cout << " -- restarted\n";
+            rollbacked = false;
+        } else  cout << " -- continued\n";
         proceed();
     }
 

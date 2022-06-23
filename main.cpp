@@ -9,6 +9,21 @@ const map<string, ProtocolType> getPt{{"abort", ProtocolType::ABORT}, {"wait-die
 
 int main(int argc, char* argv[])
 {
-    ProtocolType protocol = (argc == 1)? ProtocolType::ABORT: getPt.at(argv[1]);
-    TransactionManager tm("in.txt", protocol);
+    string input_path = "in.txt";
+    auto protocol = ProtocolType::ABORT;
+    for (int i = 1; i < argc; i++)
+    {
+        // cout << "argv: ." << argv[i] << ".\n";
+        if (string(argv[i]) == "-f")
+        {
+            i++;
+            input_path = argv[i];
+        } else if (string(argv[i]) == "-p")
+        {
+            i++;
+            protocol = getPt.at(argv[i]);
+        }
+    }
+    
+    TransactionManager tm(input_path, protocol);
 }
