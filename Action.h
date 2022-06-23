@@ -5,7 +5,7 @@
 #include <string>
 #include <iostream>
 
-#include "SetList.h"
+#include "List.h"
 
 using namespace std;
 
@@ -33,7 +33,7 @@ protected:
 
     friend Item;
 
-    void addDependencies(SetList<Transaction*> dep);
+    void addDependencies(List<Transaction*> dep);
 public:
     
     Action(Transaction* const parent, ActionType type, int timestamp);

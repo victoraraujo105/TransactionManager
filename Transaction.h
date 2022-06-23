@@ -4,8 +4,9 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <iostream>
 
-#include "SetList.h"
+#include "List.h"
 
 using namespace std;
 
@@ -15,10 +16,10 @@ class Action;
 class ReadAction;
 class Item;
 
-using Dependents = SetList<Transaction*>;
+using Dependents = List<Transaction*>;
 using Dependencies = Dependents;
 using Actions = vector<Action*>;
-using LockedItems = SetList<Item*>;
+using LockedItems = List<Item*>;
 
 class Transaction
 {
@@ -42,7 +43,12 @@ public:
 
     void restart()
     {
-        rollbacked = false;
+        cout << this;
+        if (rollbacked)
+        {
+            cout << " -- restarted\n";
+            rollbacked = false;
+        } else  cout << " -- continued\n";
         proceed();
     }
 

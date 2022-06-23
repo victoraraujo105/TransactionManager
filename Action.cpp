@@ -5,6 +5,9 @@
 
 #include <iostream>
 #include <string>
+#include "List.h"
+
+using namespace std;
 
 Action::Action(Transaction* const parent, ActionType type, int timestamp):
     parent(parent), type(type), timestamp(timestamp), parentId(parent->id), state(ActionState::STASHED)
@@ -13,7 +16,7 @@ Action::Action(Transaction* const parent, ActionType type, int timestamp):
     if (parent->next == parent->actions.size() - 1) parent->proceed();
 }
 
-void Action::addDependencies(SetList<Transaction*> dependencies)
+void Action::addDependencies(List<Transaction*> dependencies)
 {
     for (const auto& dep: dependencies) parent->dependencies.push_back(dep);
 }
@@ -32,9 +35,9 @@ void ReadAction::run()
         parent->forwardAndProceed();
     } else if (state == ActionState::STASHED) {
         cout << to_string() << " -- stashed\n";
+        item.printLocked();
     } else if (state == ActionState::ROLLBACKED) {
         cout << to_string() << " -- rollbacked\n";
-        // item.printQueue();
         item.printLocked();
     } else if (state == ActionState::DEADLOCKED) {
         parent->rollback();
@@ -50,9 +53,9 @@ void WriteAction::run()
         parent->forwardAndProceed();
     } else if (state == ActionState::STASHED) {
         cout << to_string() << " -- stashed\n";
+        item.printLocked();
     } else if (state == ActionState::ROLLBACKED) {
-        cout << to_string() << " -- rollbacked\n";
-        // item.printQueue();
+        cout << to_string() << " -- rollbacked\n";;
         item.printLocked();
     } else if (state == ActionState::DEADLOCKED) {
         parent->rollback();
