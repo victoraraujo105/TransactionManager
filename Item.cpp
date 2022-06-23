@@ -46,27 +46,34 @@ bool Item::deadlocked(Transaction* a)
 void Item::freeLock(Transaction* txn)
 {
     lockers.remove(txn);
-    if (!queue.empty() && lockers.size() == 1 && lockers.contains(peekNext().first))
+    if (lockers.size() == 1 && lockers.contains(peekNext().first))
     {
         lock = nextLockType();
         return popNext();
     }
-
     if (lockers.size() > 0) return;
-
-    lock = LockType::NONE;
-
-    while (queue.size() > 0 && (peekNext().first->rollbacked || (lock = lock*nextLockType()) == LockType::SHARED || lockers.empty()))
+    // cout << "Item " << id << "'s queue:\n";
+    // for (auto p: queue)
+    // {
+    //     cout << "T" << p.first->id << ", " << (int) p.second << '\n';
+    // }
+    if (queue.size() > 0)
     {
-        popNext();
-    }
+        lock = nextLockType();
+        do {
+            popNext();
+
+        } while (queue.size() > 0 && lock*nextLockType() == LockType::SHARED);
+        return;
+    } 
+    lock = LockType::NONE;
 }
 
 void Item::popNext()
 {
-    const auto& pair = queue.pop_front();
+    const auto& pair = queue.front();
     const auto& txn = pair.first;
-    if (txn->rollbacked) return;
+    queue.remove(pair);
     lockers.push_back(txn);
     txn->addLock(this);
     txn->proceed();
@@ -91,10 +98,10 @@ ActionState Item::grantSharedLock(AccessAction* a)
         }
     case LockType::EXCLUSIVE:
         if (queue.size() == 1 && queue.front().first == txn) return ActionState::DONE;
+        txn->addDependencies(lockers);
         {
             ActionState state = txn->parent.protocol(a, lockers);
             if (state == ActionState::DONE) return grantSharedLock(a);
-            txn->addDependencies(lockers);
             if (state != ActionState::STASHED) return state;
         }
         queue.push_back(pair(txn, LockType::SHARED));

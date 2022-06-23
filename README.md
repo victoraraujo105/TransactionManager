@@ -5,14 +5,10 @@
 # Instruções de uso:
 Compile com o Makefile
 
-Rode o executável `main` passando como argumentos (opcionais) o tipo de protocolo de prevenção de deadlock e o caminho do arquivo de entrada.
+Rode o executável `main` passando como argumento o tipo de protocolo de prevenção de deadlock.
 
-Os tipos de protocolo disponíveis são `abort`, `wait-die` e `wound-wait` e devem ser informados após o indicador `-p`.
+Os tipos de protocolo disponíveis são `abort`, `wait-die` e `wound-wait`.
 
-O caminho do arquivo de entrada deve ser especificado após o indicador `-f`
+Os comandos são lidos a partir do aquivo `in.txt` na raiz do projeto.
 
-Por padrão, os comandos são lidos a partir do aquivo ilustrativo `in.txt` incluido na raiz do projeto com o protocolo `abort` (que aborta a execução mediante detecção de deadlock).
-
-As opções podem ser informadas em qualquer ordem ou omitidas.
-
-Exemplo de execução: `>> ./main -p wound-wait -f in2.txt`
+Exemplo de execução: `>> ./main wound-wait`

@@ -4,7 +4,7 @@
 #include "Transaction.h"
 #include "Item.h"
 #include "Action.h"
-#include "List.h"
+#include "SetList.h"
 
 #include <map>
 #include <string>
@@ -45,7 +45,7 @@ enum class ProtocolType
     ABORT, WAIT_DIE, WOUND_WAIT
 };
 
-using TransactionQ = List<Transaction*>;
+using TransactionQ = SetList<Transaction*>;
 
 using Protocol = ActionState (*)(AccessAction*, TransactionQ);
 
@@ -106,17 +106,14 @@ private:
     // 
     static ActionState wound_wait(AccessAction* a, TransactionQ lockers)
     {
-        cout << a->to_string() << " -- trying...\n";
         ActionState state = ActionState::DONE;
         bool rollbacked = false;
         const auto& txn = a->parent;
         for (const auto& b: lockers)
             if ((*txn) < (*b))
             {
-                cout << b << " -- rollbacked\n";
                 b->rollback();
-                b->dependencies.push_back(txn);
-                txn->dependents.push_back(b);
+                cout << b << " -- rollbacked\n";
                 rollbacked = true;
             } else if (txn != b) state = ActionState::STASHED;
         if (rollbacked) a->item.printLocked();

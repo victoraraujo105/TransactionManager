@@ -1,12 +1,11 @@
 #ifndef ITEM_H
 #define ITEM_H
 
-#include "List.h"
+#include <list>
 #include <memory>
 #include <string>
-#include <map>
 
-#include "List.h"
+#include "SetList.h"
 
 using namespace std;
 
@@ -38,14 +37,14 @@ class AccessAction;
 enum class ActionState;
 
 using LockRequest = pair<Transaction*, LockType>;
-using Lockers = List<Transaction*>;
+using Lockers = SetList<Transaction*>;
 
 class Item
 {
 private:
     LockType lock;
     Lockers lockers;
-    List<LockRequest> queue;
+    SetList<LockRequest> queue;
 
     friend TransactionManager;
     friend Transaction;
