@@ -1,10 +1,9 @@
 #ifndef ITEM_H
 #define ITEM_H
 
-#include <list>
 #include <memory>
 #include <string>
-
+#include <map>
 #include "SetList.h"
 
 using namespace std;
@@ -60,6 +59,8 @@ private:
     const LockRequest& peekNext() { return queue.front(); }
 
     void freeLock(Transaction* txn);
+    
+    void jerkForward();
 
     bool deadlocked(Transaction* a);
 

@@ -9,7 +9,7 @@
 using namespace std;
 
 Transaction::Transaction(TransactionManager& parent, string id, int timestamp):
-    parent(parent), next(0), id(id), rollbacked(false), timestamp(timestamp)
+    parent(parent), next(0), id(id), rollbacked(false), timestamp(timestamp), nextLock(nullptr, nullptr)
 {
     parent.trans[id] = this;
 }
@@ -43,6 +43,13 @@ bool Transaction::isLocking(Item* item)
 
 void Transaction::rollback()
 {
+    auto& item = nextLock.first;
+    if (item != NULL)
+    {
+        item->queue.remove(*nextLock.second);
+        item->jerkForward();
+
+    }
     rollbacked = true;
     next = 0;
     while (!locked.empty())

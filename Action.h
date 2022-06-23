@@ -27,7 +27,6 @@ class Action
 protected:
     Transaction* const parent;
     const string& parentId;
-    const ActionType type;
     const int timestamp;
     ActionState state;
 
@@ -35,6 +34,7 @@ protected:
 
     void addDependencies(SetList<Transaction*> dep);
 public:
+    const ActionType type;
     
     Action(Transaction* const parent, ActionType type, int timestamp);
 

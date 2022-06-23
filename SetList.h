@@ -1,72 +1,46 @@
 #ifndef SETLIST_H
 #define SETLIST_H
 
-#include <map>
 #include <list>
-#include <iostream>
 
 using namespace std;
 
 template <class T>
-class SetList
+class SetList: public list<T>
 {
-private:
-    list<T> data;
-    map<T, _List_iterator<T>> pos;
-
+    using base = list<T>;
 public:
-    void push_back(T e)
+    bool contains(const T& a)
     {
-        if (contains(e))
+        for (const auto& b: *this)
         {
-            return;
-        // data.erase(pos.at(e));
-            // data.remove(e);
+            if (a == b) return true;
         }
-        pos.insert({e, data.insert(data.end(), e)});
+        return false;
+    }
+
+    void push_back (const T& val)
+    {
+        if (!contains(val)) base::push_back(val);
+    }
+
+    void push_back (T&& val)
+    {
+        if (!contains(val)) base::push_back(val);
+    }
+
+    T pop_front()
+    {
+        T front = base::front();
+        base::pop_front();
+        return front;
     }
 
     T pop_back()
     {
-        auto back = data.back();
-        data.remove(back);
+        T back = base::back();
+        base::pop_back();
         return back;
-    }
-
-    T& front() { return data.front(); }
-
-    bool remove(T e)
-    {
-        data.erase(pos.at(e));
-        return pos.erase(e) > 0;
-    }
-
-    bool contains(T e) const
-    {
-        return pos.contains(e);
-    }
-
-    size_t size() { return data.size(); }
-
-    auto begin() const -> decltype(data.begin())
-    {
-        return data.begin();
-    }
-
-    auto end() const -> decltype(data.end())
-    {
-        return data.end();
-    }
-
-    inline void clear()
-    {
-        data.clear();
-        pos.clear();
-    }
-
-    inline bool empty()
-    {
-        return data.empty();
     }
 };
 

@@ -5,6 +5,9 @@
 
 #include <iostream>
 #include <string>
+#include "SetList.h"
+
+using namespace std;
 
 Action::Action(Transaction* const parent, ActionType type, int timestamp):
     parent(parent), type(type), timestamp(timestamp), parentId(parent->id), state(ActionState::STASHED)
@@ -32,9 +35,9 @@ void ReadAction::run()
         parent->forwardAndProceed();
     } else if (state == ActionState::STASHED) {
         cout << to_string() << " -- stashed\n";
+        item.printLocked();
     } else if (state == ActionState::ROLLBACKED) {
         cout << to_string() << " -- rollbacked\n";
-        // item.printQueue();
         item.printLocked();
     } else if (state == ActionState::DEADLOCKED) {
         parent->rollback();
@@ -50,9 +53,9 @@ void WriteAction::run()
         parent->forwardAndProceed();
     } else if (state == ActionState::STASHED) {
         cout << to_string() << " -- stashed\n";
+        item.printLocked();
     } else if (state == ActionState::ROLLBACKED) {
-        cout << to_string() << " -- rollbacked\n";
-        // item.printQueue();
+        cout << to_string() << " -- rollbacked\n";;
         item.printLocked();
     } else if (state == ActionState::DEADLOCKED) {
         parent->rollback();

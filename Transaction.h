@@ -4,6 +4,7 @@
 #include <vector>
 #include <set>
 #include <string>
+#include <iostream>
 
 #include "SetList.h"
 
@@ -19,6 +20,9 @@ using Dependents = SetList<Transaction*>;
 using Dependencies = Dependents;
 using Actions = vector<Action*>;
 using LockedItems = SetList<Item*>;
+enum class LockType;
+using LockRequest = pair<Transaction*, LockType>;
+using Lock = pair<Item*, LockRequest*>;
 
 class Transaction
 {
@@ -30,7 +34,8 @@ private:
     Dependents dependents;
     LockedItems locked;
     bool rollbacked;
-    int timestamp;
+    int timestamp, lastRollback;
+    Lock nextLock;
 
     friend Action;
     friend Item;
@@ -42,7 +47,12 @@ public:
 
     void restart()
     {
-        rollbacked = false;
+        cout << this;
+        if (rollbacked)
+        {
+            cout << " -- restarted\n";
+            rollbacked = false;
+        } else  cout << " -- continued\n";
         proceed();
     }
 
